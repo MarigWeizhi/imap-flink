@@ -16,7 +16,7 @@ import java.sql.Timestamp;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReportCountView {
-    private String siteId;
+    private Integer siteId;
     private Long count;
     private Long start;
     private  Long end;

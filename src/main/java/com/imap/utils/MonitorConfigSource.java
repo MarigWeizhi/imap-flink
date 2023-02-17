@@ -27,7 +27,7 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
     @Override
     public void run(SourceContext<MonitorConfig> sourceContext) throws Exception {
         Connection connection = MySQLUtil.getConnection();
-        String sql = "select `site_id`,`timestamp`,`status`,`version`,`interval`,`monitor_items` from monitor_config";
+        String sql = "select `site_id`,`timestamp`,`status`,`version`,`interval`,`monitor_items` from dev_monitor_config";
         while (running) {
             Statement stat = connection.createStatement();
             ResultSet resultSet = stat.executeQuery(sql);
@@ -39,13 +39,14 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
         }
     }
 
-    private MonitorConfig getConfigFromResultSet(ResultSet resultSet) throws SQLException, IOException {
+    private static MonitorConfig getConfigFromResultSet(ResultSet resultSet) throws SQLException, IOException {
 //        site_id,timestamp,status,version,interval,monitor_items
-        String siteId = resultSet.getString("site_id");
-        long timestamp = resultSet.getLong("timestamp");
+        int siteId = resultSet.getInt("site_id");
+        long timestamp = resultSet.getTimestamp("timestamp").getTime();
         int status = resultSet.getInt("status");
         int version = resultSet.getInt("version");
         int interval = resultSet.getInt("interval");
+
         String monitorItems = resultSet.getString("monitor_items");
         Map<String, MonitorItem> items = (Map<String, MonitorItem>)
                 MapperUtil.str2Object(monitorItems,
@@ -66,5 +67,16 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
     @Override
     public void cancel() {
         running = false;
+    }
+
+    public static void main(String[] args) throws SQLException, IOException, ClassNotFoundException {
+        Connection connection = MySQLUtil.getConnection();
+        String sql = "select `site_id`,`timestamp`,`status`,`version`,`interval`,`monitor_items` from dev_monitor_config";
+        Statement stat = connection.createStatement();
+        ResultSet resultSet = stat.executeQuery(sql);
+        while (resultSet.next()) {
+            MonitorConfig monitorConfig = getConfigFromResultSet(resultSet);
+            System.out.println(monitorConfig);
+        }
     }
 }

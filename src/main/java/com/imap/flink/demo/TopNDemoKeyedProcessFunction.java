@@ -73,9 +73,9 @@ public class TopNDemoKeyedProcessFunction {
         }
     }
 
-    private static class CountResultWindowFunction extends ProcessWindowFunction<Long, ReportCountView, String, TimeWindow> {
+    private static class CountResultWindowFunction extends ProcessWindowFunction<Long, ReportCountView, Integer, TimeWindow> {
         @Override
-        public void process(String key, Context context, Iterable<Long> iterable, Collector<ReportCountView> collector) throws Exception {
+        public void process(Integer key, Context context, Iterable<Long> iterable, Collector<ReportCountView> collector) throws Exception {
             Long count = iterable.iterator().next();
 
             long currentWatermark = context.currentWatermark();

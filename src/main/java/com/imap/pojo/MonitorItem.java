@@ -15,10 +15,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MonitorItem {
     private String type;
-    private boolean monitor;
-    private int interval;
-    private double max;
-    private double min;
+    private Boolean monitor;
+    private Integer interval;
+    private Double max;
+    private Double min;
 
     @Override
     public String toString() {

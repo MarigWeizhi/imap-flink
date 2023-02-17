@@ -44,7 +44,7 @@ public class TopNDemo_AllWindowFunction {
         env.execute();
     }
 
-    private static class CountReportAggFunction implements AggregateFunction<DataReport, HashMap<String,Long>, ArrayList<Tuple2<String,Long>>> {
+    private static class CountReportAggFunction implements AggregateFunction<DataReport, HashMap<Integer,Long>, ArrayList<Tuple2<Integer,Long>>> {
         private int N;
 
         public CountReportAggFunction() {
@@ -56,22 +56,23 @@ public class TopNDemo_AllWindowFunction {
         }
 
         @Override
-        public HashMap<String, Long> createAccumulator() {
+        public HashMap<Integer, Long> createAccumulator() {
             return new HashMap<>();
         }
 
         @Override
-        public HashMap<String, Long> add(DataReport dataReport, HashMap<String, Long> map) {
+        public HashMap<Integer, Long> add(DataReport dataReport, HashMap<Integer, Long> map) {
             Long count = map.getOrDefault(dataReport.getSiteId(), 0L);
             map.put(dataReport.getSiteId(),count+1);
             return map;
         }
 
         @Override
-        public ArrayList<Tuple2<String, Long>> getResult(HashMap<String, Long> stringLongHashMap) {
-            ArrayList<Tuple2<String, Long>> list = new ArrayList<>();
-            ArrayList<Tuple2<String, Long>> topList = new ArrayList<>();
-            for (Map.Entry<String, Long> item : stringLongHashMap.entrySet()) {
+        public ArrayList<Tuple2<Integer, Long>> getResult(HashMap<Integer, Long> stringLongHashMap) {
+            ArrayList<Tuple2<Integer, Long>> list = new ArrayList<>();
+            ArrayList<Tuple2<Integer, Long>> topList = new ArrayList<>();
+
+            for (Map.Entry<Integer, Long> item : stringLongHashMap.entrySet()) {
                 list.add(Tuple2.of(item.getKey(),item.getValue()));
             }
 //            list.sort(Comparator.comparing(i -> i.f1));
@@ -85,21 +86,21 @@ public class TopNDemo_AllWindowFunction {
         }
 
         @Override
-        public HashMap<String, Long> merge(HashMap<String, Long> stringLongHashMap, HashMap<String, Long> acc1) {
+        public HashMap<Integer, Long> merge(HashMap<Integer, Long> stringLongHashMap, HashMap<Integer, Long> acc1) {
             return null;
         }
     }
 
-    private static class ResultWindowFunction extends ProcessAllWindowFunction<ArrayList<Tuple2<String,Long>>,ReportCountView, TimeWindow> {
+    private static class ResultWindowFunction extends ProcessAllWindowFunction<ArrayList<Tuple2<Integer,Long>>,ReportCountView, TimeWindow> {
 
 
         @Override
-        public void process(Context context, Iterable<ArrayList<Tuple2<String, Long>>> iterable, Collector<ReportCountView> collector) throws Exception {
-            ArrayList<Tuple2<String, Long>> list = iterable.iterator().next();
+        public void process(Context context, Iterable<ArrayList<Tuple2<Integer, Long>>> iterable, Collector<ReportCountView> collector) throws Exception {
+            ArrayList<Tuple2<Integer, Long>> list = iterable.iterator().next();
             long start = context.window().getStart();
             long end = context.window().getEnd();
             for (int i = 0; i < list.size(); i++) {
-                Tuple2<String, Long> tuple2 = list.get(i);
+                Tuple2<Integer, Long> tuple2 = list.get(i);
                 collector.collect(new ReportCountView(tuple2.f0,tuple2.f1,start,end));
             }
         }

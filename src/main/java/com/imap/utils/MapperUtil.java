@@ -57,7 +57,7 @@ public class MapperUtil {
         HashMap<String, Double> map = new HashMap<>();
         map.put("test",1.2);
         map.put("java",8.8);
-        DataReport dataReport = new DataReport("ss", 111L, "type", 1,0, map);
+        DataReport dataReport = new DataReport(1, 111L, "type", 1,0, map);
         String str = obj2Str(dataReport);
         System.out.println(str);
         DataReport dataReport1 = (DataReport)str2DataReport(str);

@@ -17,18 +17,18 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DataReport {
-    private String siteId;  // 站点id
-    private long timestamp; // 创建时间
+    private Integer siteId;  // 站点id
+    private Long timestamp; // 创建时间
     private String type;  // 数据类型
-    private int version;  // 监控版本
-    private int status; // 数据状态 0为正常，1为异常
+    private Integer version;  // 监控版本
+    private Integer status; // 数据状态 0为正常，1为异常
     private Map<String,Double> data;  // 数据
 
 
     @Override
     public String toString() {
         return "DataReport{" +
-                "siteId='" + siteId + '\'' +
+                "siteId=" + siteId +
                 ", timestamp=" + new Timestamp(timestamp) +
                 ", type='" + type + '\'' +
                 ", version=" + version +

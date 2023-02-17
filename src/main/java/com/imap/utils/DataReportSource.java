@@ -17,7 +17,8 @@ import static java.lang.Thread.sleep;
 public class DataReportSource implements SourceFunction<DataReport> {
     private  boolean running = true;
 
-    public static final String[] SITE_ID = {"IMAP_001","IMAP_002","IMAP_003","IMAP_004","IMAP_005"};
+//    public static final String[] SITE_ID = {"IMAP_001","IMAP_002","IMAP_003","IMAP_004","IMAP_005"};
+    public static final int[] SITE_ID = {1,2,3,4,5};
     public static final String TYPE = "report";
 
     public static int version = 1;
