@@ -20,6 +20,7 @@ public class Test {
         env.setParallelism(1);
         DataStreamSource<DataReport> dataReportDataStreamSource = env.addSource(new DataReportSource());
 
+
         DataStreamSource<Row> input = env.createInput(
                 JdbcInputFormat
                         .buildJdbcInputFormat()

@@ -1,11 +1,16 @@
 package com.imap.pojo;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.imap.utils.DataReportSource;
+import com.imap.utils.MapperUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,4 +60,40 @@ public class MonitorConfig {
         return monitorConfigs;
     }
 
+    public static MonitorConfig getConfig(ResultSet resultSet) throws SQLException, IOException {
+//        site_id,timestamp,status,version,interval,monitor_items
+        int siteId = resultSet.getInt("site_id");
+        long timestamp = resultSet.getTimestamp("timestamp").getTime();
+        int status = resultSet.getInt("status");
+        int version = resultSet.getInt("version");
+        int interval = resultSet.getInt("interval");
+
+        String monitorItems = resultSet.getString("monitor_items");
+        Map<String, MonitorItem> items = (Map<String, MonitorItem>)
+                MapperUtil.str2Object(monitorItems,
+                        new TypeReference<Map<String, MonitorItem>>() {
+                        });
+        MonitorConfig monitorConfig = new MonitorConfig(
+                siteId,
+                timestamp,
+                status,
+                version,
+                interval,
+                items
+        );
+        return monitorConfig;
+    }
+
+    public static MonitorConfig getConfig(String json) throws IOException {
+        MonitorConfig config = (MonitorConfig) MapperUtil.str2Object(json, MonitorConfig.class);
+        return config;
+    }
+
+    public static void main(String[] args) throws IOException {
+        MonitorConfig defaultConfig = getDefaultConfig(1);
+        String str = MapperUtil.obj2Str(defaultConfig);
+        System.out.println(str);
+        MonitorConfig configFromJson = getConfig(str);
+        System.out.println(configFromJson);
+    }
 }

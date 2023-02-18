@@ -15,7 +15,6 @@ import java.util.HashMap;
  */
 public class MapperUtil {
 
-    
     private volatile static  ObjectMapper mapper;
 
     private static ObjectMapper getMapper(){
@@ -47,9 +46,14 @@ public class MapperUtil {
         return o;
     }
 
-    public static String obj2Str(Object obj) throws JsonProcessingException {
+    public static String obj2Str(Object obj) {
         ObjectMapper objectMapper = getMapper();
-        String jsonString = objectMapper.writeValueAsString(obj);
+        String jsonString = null;
+        try {
+            jsonString = objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         return jsonString;
     }
 

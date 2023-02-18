@@ -26,7 +26,6 @@ public class SourceKafka {
             DataReport dataReport = (DataReport) MapperUtil.str2Object(json, DataReport.class);
             return dataReport;
         }).print();
-
         env.execute();
     }
 }

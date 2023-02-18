@@ -26,13 +26,24 @@ public class DataReportSource implements SourceFunction<DataReport> {
 
     public Random random = new Random();
 
+    private long interval;
+
+
+    public DataReportSource() {
+        this(1000);
+    }
+
+    public DataReportSource(long interval) {
+        this.interval = interval;
+    }
+
 
     @Override
     public void run(SourceContext<DataReport> sourceContext) throws Exception {
         String[] names = {"tmp","hmt","mq2","mq7"};
 
         while (running){
-            sleep(1000);
+            sleep(interval);
             HashMap<String, Double> map = new HashMap<>();
             DataReport dataReport = new DataReport();
 
