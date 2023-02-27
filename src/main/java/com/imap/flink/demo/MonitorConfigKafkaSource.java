@@ -12,7 +12,6 @@ import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
 
-import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -20,7 +19,7 @@ import java.util.Properties;
  * @Date: create in 2023/1/8 22:48
  * @Description:
  */
-public class MonitorConfigSourceKafka {
+public class MonitorConfigKafkaSource {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);

@@ -50,7 +50,7 @@ public class DataReportToMySQL {
                         preparedStatement.setString(6, MapperUtil.obj2Str(dataReport.getData()));
                     }
                 },
-                // 流式数据的攒批逻辑（不是来一条sink一条）
+                // 配置流式数据的攒批逻辑（不是来一条sink一条）
                 JdbcExecutionOptions
                         .builder()
                         .withBatchIntervalMs(5000)

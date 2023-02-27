@@ -15,7 +15,7 @@ import java.util.Properties;
  * @Date: create in 2023/1/8 22:48
  * @Description:
  */
-public class SourceKafka {
+public class KafkaSourceDemo {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);

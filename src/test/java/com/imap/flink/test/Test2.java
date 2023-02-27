@@ -1,4 +1,4 @@
-package com.imap.flink;
+package com.imap.flink.test;
 
 import com.imap.pojo.MonitorConfig;
 import com.imap.utils.MonitorConfigSource;

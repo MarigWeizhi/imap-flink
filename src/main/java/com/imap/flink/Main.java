@@ -15,6 +15,8 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.util.OutputTag;
 
 import java.util.Properties;
@@ -26,8 +28,14 @@ import java.util.Properties;
  */
 public class Main {
     public static void main(String[] args) throws Exception {
+        // 创建Flink执行环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
+        // 创建Table执行环境
+        EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
+
+        // Kafka 配置
         Properties prop = new Properties();
         prop.setProperty("bootstrap.servers", "47.116.66.37:9092");
         DataStreamSource<String> source = env.addSource(new FlinkKafkaConsumer<String>("test", new SimpleStringSchema(), prop));
@@ -35,6 +43,7 @@ public class Main {
             DataReport dataReport = (DataReport) MapperUtil.str2Object(json, DataReport.class);
             return dataReport;
         });
+
 //        DataStreamSource<MonitorConfig> configDataStreamSource = env.fromCollection(MonitorConfig.getDefaultConfigList());
 //        监控广播流
         DataStreamSource<MonitorConfig> configDataStreamSource = env.addSource(new MonitorConfigSource());
@@ -43,7 +52,8 @@ public class Main {
 
         // 异常数据分流标签
         // 最右边的大括号不能少，不然会有泛型擦除的问题
-        OutputTag<Tuple2<DataReport, MonitorItem>> abnormalDataTag = new OutputTag<Tuple2<DataReport, MonitorItem>>("abnormalData"){};
+        OutputTag<Tuple2<DataReport, MonitorItem>> abnormalDataTag = new OutputTag<Tuple2<DataReport, MonitorItem>>("abnormalData") {
+        };
 
         SingleOutputStreamOperator<DataReport> processedStream = dataReportStream.keyBy(data -> data.getSiteId())
                 .connect(configBroadcastStream)
@@ -51,10 +61,15 @@ public class Main {
 
 //        提取异常数据流
         DataStream<Tuple2<DataReport, MonitorItem>> abnormalDataStream = processedStream.getSideOutput(abnormalDataTag);
-
         abnormalDataStream.print("异常数据");
-        processedStream.print("输出");
+        // TODO 异常数据通知SpringBoot
+        
+        AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.MINUTE, processedStream);
+        AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.HOUR, processedStream);
 
+        // TODO 输出到HDFS
+
+        processedStream.print("输出");
         env.execute();
     }
 }
