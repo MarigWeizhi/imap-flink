@@ -40,7 +40,7 @@ public class DataReportSource implements SourceFunction<DataReport> {
 
     @Override
     public void run(SourceContext<DataReport> sourceContext) throws Exception {
-        String[] names = {"tmp","hmt","mq2","mq7"};
+        String[] names = {"tmp","hmt","lx"};
 
         while (running){
             sleep(interval);
@@ -49,8 +49,7 @@ public class DataReportSource implements SourceFunction<DataReport> {
 
             map.put(names[0],getRandomData(2,2));
             map.put(names[1],getRandomData(0,2));
-            map.put(names[2],getRandomData(2,2));
-            map.put(names[3],getRandomData(2,2));
+            map.put(names[2],getRandomData(3,2));
 
             dataReport.setTimestamp(System.currentTimeMillis());
             dataReport.setSiteId(SITE_ID[random.nextInt(SITE_ID.length)]);

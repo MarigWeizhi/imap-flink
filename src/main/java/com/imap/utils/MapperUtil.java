@@ -27,6 +27,7 @@ public class MapperUtil {
         }
         return mapper;
     }
+
     public static Object str2Object(String str,Object cls) throws IOException {
         Object obj = null;
         ObjectMapper objectMapper = getMapper();

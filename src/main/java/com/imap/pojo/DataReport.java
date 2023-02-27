@@ -24,7 +24,6 @@ public class DataReport {
     private Integer status; // 数据状态 0为正常，1为异常
     private Map<String,Double> data;  // 数据
 
-
     @Override
     public String toString() {
         return "DataReport{" +
