@@ -1,5 +1,7 @@
 package com.imap.pojo;
 
+import com.imap.utils.DataReportSource;
+import com.imap.utils.MapperUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,13 +28,11 @@ public class DataReport {
 
     @Override
     public String toString() {
-        return "DataReport{" +
-                "siteId=" + siteId +
-                ", timestamp=" + new Timestamp(timestamp) +
-                ", type='" + type + '\'' +
-                ", version=" + version +
-                ", status=" + status +
-                ", data=" + data +
-                '}';
+        return MapperUtil.obj2Str(this);
+    }
+
+    public static void main(String[] args) {
+        DataReport dataReport = DataReportSource.getRandomDataReport();
+        System.out.println(dataReport);
     }
 }

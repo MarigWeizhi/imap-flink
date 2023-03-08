@@ -3,6 +3,7 @@ package com.imap.pojo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.imap.utils.DataReportSource;
 import com.imap.utils.MapperUtil;
+import com.imap.utils.MathUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,18 +31,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MonitorConfig {
     private Integer siteId;  // 监控站点
     private Long timestamp; // 创建时间
-    private Integer status; // 状态
-    private Integer version;    // 监控配置版本，设备端上报时候版本过低，则会返回最新版
+    private Integer version;    // 监控配置版本，设备端拉取最新版
     private Integer interval;   // 设备数据上报时间间隔
+    private Integer isDelete; // 是否删除
     private Map<String,MonitorItem> monitorItems;  // 保存各个监控传感器配置项
 
     public static MonitorConfig getDefaultConfig(Integer siteId){
         MonitorConfig monitorConfig = new MonitorConfig();
         monitorConfig.setSiteId(siteId);
-        MonitorItem tmp = new MonitorItem("tmp", true, 30,
-                DataReportSource.getRandomData(2,2), 0.00);
-        MonitorItem hmt = new MonitorItem("hmt", true, 30,
-                DataReportSource.getRandomData(0,2), 0.00);
+        monitorConfig.setInterval(30);
+        monitorConfig.setTimestamp(System.currentTimeMillis());
+        monitorConfig.setVersion(1);
+        monitorConfig.setIsDelete(0);
+        MonitorItem tmp = new MonitorItem("tmp", 1,
+                MathUtil.getRandomData(2,2), 0.00);
+        MonitorItem hmt = new MonitorItem("hmt", 1,
+                MathUtil.getRandomData(0,2), 0.00);
         ConcurrentHashMap<String, MonitorItem> monitorItemConcurrentHashMap = new ConcurrentHashMap<>();
         monitorItemConcurrentHashMap.put("tmp",tmp);
         monitorItemConcurrentHashMap.put("hmt",hmt);
@@ -64,28 +69,27 @@ public class MonitorConfig {
 //        site_id,timestamp,status,version,interval,monitor_items
         int siteId = resultSet.getInt("site_id");
         long timestamp = resultSet.getTimestamp("timestamp").getTime();
-        int status = resultSet.getInt("status");
         int version = resultSet.getInt("version");
         int interval = resultSet.getInt("interval");
+        int isDelete = resultSet.getInt("is_delete");
 
-        String monitorItems = resultSet.getString("monitor_items");
+        String monitorItemsStr = resultSet.getString("monitor_items");
         Map<String, MonitorItem> items = (Map<String, MonitorItem>)
-                MapperUtil.str2Object(monitorItems,
-                        new TypeReference<Map<String, MonitorItem>>() {
-                        });
+                MapperUtil.jsonToObj(monitorItemsStr,
+                        new TypeReference<Map<String, MonitorItem>>() {});
         MonitorConfig monitorConfig = new MonitorConfig(
                 siteId,
                 timestamp,
-                status,
                 version,
                 interval,
+                isDelete,
                 items
         );
         return monitorConfig;
     }
 
     public static MonitorConfig getConfig(String json) throws IOException {
-        MonitorConfig config = (MonitorConfig) MapperUtil.str2Object(json, MonitorConfig.class);
+        MonitorConfig config = MapperUtil.jsonToObj(json, MonitorConfig.class);
         return config;
     }
 

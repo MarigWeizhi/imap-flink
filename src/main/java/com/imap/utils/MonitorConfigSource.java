@@ -24,7 +24,7 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
     @Override
     public void run(SourceContext<MonitorConfig> sourceContext) throws Exception {
         Connection connection = MySQLUtil.getConnection();
-        String sql = "select `site_id`,`timestamp`,`status`,`version`,`interval`,`monitor_items` from dev_monitor_config";
+        String sql = "select `site_id`,`timestamp`,`is_delete`,`version`,`interval`,`monitor_items` from dev_monitor_config";
         while (running) {
             Statement stat = connection.createStatement();
             ResultSet resultSet = stat.executeQuery(sql);

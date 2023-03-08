@@ -15,8 +15,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MonitorItem {
     private String type;
-    private Boolean monitor;
-    private Integer interval;
+    private Integer open;
     private Double max;
     private Double min;
 
@@ -24,8 +23,7 @@ public class MonitorItem {
     public String toString() {
         return "MonitorItem{" +
                 "type='" + type + '\'' +
-                ", monitor=" + monitor +
-                ", interval=" + interval +
+                ", open=" + open +
                 ", max=" + max +
                 ", min=" + min +
                 '}';

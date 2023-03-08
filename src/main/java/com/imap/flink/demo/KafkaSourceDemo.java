@@ -23,7 +23,7 @@ public class KafkaSourceDemo {
         prop.setProperty("bootstrap.servers", "47.116.66.37:9092");
         DataStreamSource<String> source = env.addSource(new FlinkKafkaConsumer<String>("test", new SimpleStringSchema(), prop));
         source.map((MapFunction<String, DataReport>) json -> {
-            DataReport dataReport = (DataReport) MapperUtil.str2Object(json, DataReport.class);
+            DataReport dataReport = MapperUtil.jsonToObj(json, DataReport.class);
             return dataReport;
         }).print();
         env.execute();

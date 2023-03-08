@@ -69,8 +69,11 @@ public class AvgDataToMySQL {
                 $("lx")
         );
 
+        // 表名，加上minutes防止重名
+        String tableName = "dataReportTableWith" + minutes;
+
         // 注册表
-        tableEnv.createTemporaryView("dataReportTable", dataReportTable);
+        tableEnv.createTemporaryView(tableName, dataReportTable);
 
         // 聚合查询
         Table avgDataTable = tableEnv
@@ -81,7 +84,7 @@ public class AvgDataToMySQL {
                         "AVG(hmt) AS avg_hmt, " +
                         "AVG(lx) AS avg_lx " +
                         "FROM TABLE( " +
-                        "TUMBLE( TABLE dataReportTable, " +
+                        "TUMBLE( TABLE " + tableName + ", " +
                         "DESCRIPTOR(ts), " +
                         "INTERVAL '" + minutes.getMinutes() + "' MINUTE)) " + // minute分钟窗口
                         "GROUP BY siteId, window_start, window_end ");

@@ -1,5 +1,6 @@
 package com.imap.flink;
 
+import com.imap.pojo.AlarmItem;
 import com.imap.pojo.DataReport;
 import com.imap.pojo.MonitorConfig;
 import com.imap.pojo.MonitorItem;
@@ -15,6 +16,7 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.util.OutputTag;
@@ -38,38 +40,55 @@ public class Main {
         // Kafka 配置
         Properties prop = new Properties();
         prop.setProperty("bootstrap.servers", "47.116.66.37:9092");
-        DataStreamSource<String> source = env.addSource(new FlinkKafkaConsumer<String>("test", new SimpleStringSchema(), prop));
-        SingleOutputStreamOperator<DataReport> dataReportStream = source.map((MapFunction<String, DataReport>) json -> {
-            DataReport dataReport = (DataReport) MapperUtil.str2Object(json, DataReport.class);
-            return dataReport;
-        });
 
-//        DataStreamSource<MonitorConfig> configDataStreamSource = env.fromCollection(MonitorConfig.getDefaultConfigList());
-//        监控广播流
-        DataStreamSource<MonitorConfig> configDataStreamSource = env.addSource(new MonitorConfigSource());
+        // 数据源
+        SingleOutputStreamOperator<DataReport> dataReportStream =
+                env.addSource(new FlinkKafkaConsumer<String>("report",
+                        new SimpleStringSchema(),
+                        prop))
+                    .map(json -> MapperUtil.jsonToObj(json, DataReport.class));
+
+        // 测试流
+        // DataStreamSource<MonitorConfig> configDataStreamSource = env.fromCollection(MonitorConfig.getDefaultConfigList());
+
+        // 监控配置 从数据库轮询获取
+        DataStreamSource<MonitorConfig> configDataStreamSource = env.addSource(new MonitorConfigSource(5000));
+        // 监控配置 从kafka获取
+//        SingleOutputStreamOperator<MonitorConfig> configDataStreamSource =
+//                env.addSource(new FlinkKafkaConsumer<String>("config",
+//                                new SimpleStringSchema(),
+//                                prop))
+//                .map(json -> MapperUtil.jsonToObj(json, MonitorConfig.class));
+
+        // 监控广播流 <siteId,monitorConfig>
         BroadcastStream<MonitorConfig> configBroadcastStream = configDataStreamSource
-                .broadcast(new MapStateDescriptor<Void, MonitorConfig>("matcher", Void.class, MonitorConfig.class));
+                .broadcast(new MapStateDescriptor<Integer, MonitorConfig>("matcher", Integer.class, MonitorConfig.class));
 
         // 异常数据分流标签
         // 最右边的大括号不能少，不然会有泛型擦除的问题
-        OutputTag<Tuple2<DataReport, MonitorItem>> abnormalDataTag = new OutputTag<Tuple2<DataReport, MonitorItem>>("abnormalData") {
+        OutputTag<AlarmItem> abnormalDataTag = new OutputTag<AlarmItem>("abnormalData") {
         };
 
+        // 数据异常匹配
         SingleOutputStreamOperator<DataReport> processedStream = dataReportStream.keyBy(data -> data.getSiteId())
                 .connect(configBroadcastStream)
                 .process(new MonitorMatcher(abnormalDataTag));
 
-//        提取异常数据流
-        DataStream<Tuple2<DataReport, MonitorItem>> abnormalDataStream = processedStream.getSideOutput(abnormalDataTag);
+        // 提取异常数据流
+        DataStream<AlarmItem> abnormalDataStream = processedStream.getSideOutput(abnormalDataTag);
         abnormalDataStream.print("异常数据");
-        // TODO 异常数据通知SpringBoot
-        
+
+        // 异常数据发送给Kafka alarm
+        abnormalDataStream
+                .map(item -> item.toString())
+                .addSink(new FlinkKafkaProducer<String>("alarm",new SimpleStringSchema(),prop));
+
         AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.MINUTE, processedStream);
         AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.HOUR, processedStream);
 
         // TODO 输出到HDFS
-
         processedStream.print("输出");
+
         env.execute();
     }
 }

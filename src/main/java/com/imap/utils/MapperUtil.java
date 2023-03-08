@@ -28,22 +28,27 @@ public class MapperUtil {
         return mapper;
     }
 
-    public static Object str2Object(String str,Object cls) throws IOException {
-        Object obj = null;
+    public static <T> T jsonToObj(String json, Class<T> cls) {
         ObjectMapper objectMapper = getMapper();
-        if(cls instanceof TypeReference){
-//            自定义引用类型 new TypeReference<Map<String, MonitorItem>>() {}
-            obj = objectMapper.readValue(str, (TypeReference)cls);
+        try {
+            return objectMapper.readValue(json, cls);
+        } catch (IOException e) {
+            System.out.println("解析异常" + e);
+            return null;
         }
-
-        if(cls instanceof Class){
-            obj = objectMapper.readValue(str, (Class)cls);
+    }
+    public static <T> T jsonToObj(String json, TypeReference<T> reference) {
+        ObjectMapper objectMapper = getMapper();
+        try {
+            return objectMapper.readValue(json, reference);
+        } catch (IOException e) {
+            System.out.println("解析异常" + e);
+            return null;
         }
-        return obj;
     }
 
     public static DataReport str2DataReport(String str) throws IOException {
-        DataReport o = (DataReport)str2Object(str, DataReport.class);
+        DataReport o = jsonToObj(str, DataReport.class);
         return o;
     }
 

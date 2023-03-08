@@ -26,14 +26,9 @@ public class DataReportToMySQL {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
         SingleOutputStreamOperator<DataReport> dataReportStream = env.addSource(new DataReportSource(1000))
-                .assignTimestampsAndWatermarks(WatermarkStrategy
-                        .<DataReport>forMonotonousTimestamps()
-                        .withTimestampAssigner(new SerializableTimestampAssigner<DataReport>() {
-                            @Override
-                            public long extractTimestamp(DataReport dataReport, long l) {
-                                return dataReport.getTimestamp();
-                            }
-                        }));
+                .assignTimestampsAndWatermarks(WatermarkStrategy.<DataReport>forMonotonousTimestamps()
+                        .withTimestampAssigner((SerializableTimestampAssigner<DataReport>)
+                                (dataReport, l) -> dataReport.getTimestamp()));
 
         dataReportStream.print("out");
         String sql = "insert into dev_data_report (report_id, site_id,timestamp, type, version, status, data) values (null, ?, ?, ?, ?, ?, ?)";
