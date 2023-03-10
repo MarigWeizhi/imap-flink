@@ -13,6 +13,9 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
     private boolean running = true;
     private long interval = 1000;
 
+    // 提醒应用就绪
+    private boolean flag = true;
+
     public MonitorConfigSource() {
         this(1000);
     }
@@ -23,6 +26,11 @@ public class MonitorConfigSource implements SourceFunction<MonitorConfig> {
 
     @Override
     public void run(SourceContext<MonitorConfig> sourceContext) throws Exception {
+        if (flag){
+            System.out.println("监控配置就绪");
+            flag = false;
+        }
+
         Connection connection = MySQLUtil.getConnection();
         String sql = "select `site_id`,`timestamp`,`is_delete`,`version`,`interval`,`monitor_items` from dev_monitor_config";
         while (running) {

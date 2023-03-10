@@ -21,7 +21,9 @@ import org.apache.flink.types.Row;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.apache.flink.table.api.Expressions.$;
 
@@ -43,7 +45,7 @@ public class AvgDataToMySQL {
 
         SingleOutputStreamOperator<DataReport> dataReportStream = env.addSource(new DataReportSource())
                 .assignTimestampsAndWatermarks(WatermarkStrategy
-                        .<DataReport>forMonotonousTimestamps()
+                        .<DataReport>forBoundedOutOfOrderness(Duration.ofSeconds(5))
                         .withTimestampAssigner((SerializableTimestampAssigner<DataReport>) (dataReport, l) -> dataReport.getTimestamp()));
 
         // 聚合dataReport 并保存至MySQL数据库
@@ -55,8 +57,12 @@ public class AvgDataToMySQL {
 
     public static void AggDataReport(StreamTableEnvironment tableEnv, AvgDataEnum minutes, SingleOutputStreamOperator<DataReport> dataReportStream) {
         // 数据格式转换
-        SingleOutputStreamOperator<DataReportTableRow> dataReportRowStream = dataReportStream.map(new DataReportMapper());
-
+        SingleOutputStreamOperator<DataReportTableRow> dataReportRowStream = dataReportStream.map(new DataReportMapper())
+                // 重设水位线，不然会无法触发聚合函数，或者将AggDataReport的调用提前到数据源附近
+                .assignTimestampsAndWatermarks(WatermarkStrategy
+                .<DataReportTableRow>forMonotonousTimestamps()
+                .withTimestampAssigner((SerializableTimestampAssigner<DataReportTableRow>) (element, recordTimestamp) -> element.getTimestamp()));
+//        dataReportRowStream.print("转换后");
         // 创建表 并将timestamp 指定为事件时间
         Table dataReportTable = tableEnv.fromDataStream(dataReportRowStream,
                 $("siteId"),
@@ -71,7 +77,7 @@ public class AvgDataToMySQL {
 
         // 表名，加上minutes防止重名
         String tableName = "dataReportTableWith" + minutes;
-
+        System.out.println("注册表:" + tableName);
         // 注册表
         tableEnv.createTemporaryView(tableName, dataReportTable);
 
@@ -91,14 +97,18 @@ public class AvgDataToMySQL {
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(avgDataTable);
         String sql = "insert into dev_avg_data (site_id, end_time, type, avg_tmp, avg_hmt, avg_lx) values (?, ?, ?, ?, ?, ?)";
+
+        rowDataStream.print("rowDataStream");
         rowDataStream.addSink(JdbcSink.sink(
                 sql,
                 new JdbcStatementBuilder<Row>() {
                     @Override
                     public void accept(PreparedStatement preparedStatement, Row row) throws SQLException {
-                        System.out.println(row);
+                        LocalDateTime localDateTime = (LocalDateTime) row.getField(1);
+//                        ZoneId asiaShanghai = ZoneId.of("Asia/Shanghai");
+//                        System.out.println(row);
                         preparedStatement.setInt(1, (Integer) row.getField(0));
-                        preparedStatement.setTimestamp(2, Timestamp.valueOf((LocalDateTime) row.getField(1)));
+                        preparedStatement.setTimestamp(2, Timestamp.valueOf(localDateTime.plusHours(8)));
                         preparedStatement.setInt(3, minutes.getType());
                         preparedStatement.setDouble(4, (Double) row.getField(2));
                         preparedStatement.setDouble(5, (Double) row.getField(3));

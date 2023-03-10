@@ -6,6 +6,8 @@ import com.imap.pojo.MonitorConfig;
 import com.imap.pojo.MonitorItem;
 import com.imap.utils.MapperUtil;
 import com.imap.utils.MonitorConfigSource;
+import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -15,12 +17,19 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
+import org.apache.flink.streaming.connectors.kafka.table.KafkaOptions;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
 
+import java.time.Duration;
 import java.util.Properties;
 
 /**
@@ -38,15 +47,24 @@ public class Main {
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 
         // Kafka 配置
-        Properties prop = new Properties();
-        prop.setProperty("bootstrap.servers", "47.116.66.37:9092");
+        Properties earliestProp = new Properties();
+        earliestProp.setProperty("bootstrap.servers", "47.116.66.37:9092");
+        earliestProp.setProperty(KafkaOptions.SCAN_STARTUP_MODE.key(), KafkaOptions.SCAN_STARTUP_MODE_VALUE_EARLIEST);
+
+        Properties latestProp = new Properties();
+        latestProp.setProperty("bootstrap.servers", "47.116.66.37:9092");
+        latestProp.setProperty(KafkaOptions.SCAN_STARTUP_MODE.key(), KafkaOptions.SCAN_STARTUP_MODE_VALUE_LATEST);
 
         // 数据源
         SingleOutputStreamOperator<DataReport> dataReportStream =
                 env.addSource(new FlinkKafkaConsumer<String>("report",
                         new SimpleStringSchema(),
-                        prop))
-                    .map(json -> MapperUtil.jsonToObj(json, DataReport.class));
+                                latestProp))
+                    .map(json -> MapperUtil.jsonToObj(json, DataReport.class))
+                    // 设置水位线
+                    .assignTimestampsAndWatermarks(WatermarkStrategy
+                    .<DataReport>forBoundedOutOfOrderness(Duration.ZERO)
+                    .withTimestampAssigner((SerializableTimestampAssigner<DataReport>) (data, l) -> data.getTimestamp()));
 
         // 测试流
         // DataStreamSource<MonitorConfig> configDataStreamSource = env.fromCollection(MonitorConfig.getDefaultConfigList());
@@ -57,7 +75,7 @@ public class Main {
 //        SingleOutputStreamOperator<MonitorConfig> configDataStreamSource =
 //                env.addSource(new FlinkKafkaConsumer<String>("config",
 //                                new SimpleStringSchema(),
-//                                prop))
+//                                earliestProp))
 //                .map(json -> MapperUtil.jsonToObj(json, MonitorConfig.class));
 
         // 监控广播流 <siteId,monitorConfig>
@@ -81,14 +99,16 @@ public class Main {
         // 异常数据发送给Kafka alarm
         abnormalDataStream
                 .map(item -> item.toString())
-                .addSink(new FlinkKafkaProducer<String>("alarm",new SimpleStringSchema(),prop));
+                .addSink(new FlinkKafkaProducer<String>("alarm",new SimpleStringSchema(),earliestProp));
 
+        // 聚合
         AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.MINUTE, processedStream);
         AvgDataToMySQL.AggDataReport(tableEnv, AvgDataEnum.HOUR, processedStream);
 
         // TODO 输出到HDFS
-        processedStream.print("输出");
+//        processedStream.print("输出");
 
+        System.out.println("主进程就绪");
         env.execute();
     }
 }
