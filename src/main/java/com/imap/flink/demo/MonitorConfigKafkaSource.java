@@ -32,7 +32,7 @@ public class MonitorConfigKafkaSource {
         prop.setProperty("auto.offset.reset", "latest");
 
         DataStreamSource<String> source = env.addSource(new FlinkKafkaConsumer<String>("config", new SimpleStringSchema(), prop));
-        SingleOutputStreamOperator<MonitorConfig> map = source.map((MapFunction<String, MonitorConfig>) json -> MonitorConfig.getConfig(json));
+        SingleOutputStreamOperator<MonitorConfig> map = source.map((MapFunction<String, MonitorConfig>) json -> MonitorConfig.fromResultSet(json));
 
         map.keyBy(item -> true)
                 .process(new CurrentConfigProcessFunction())

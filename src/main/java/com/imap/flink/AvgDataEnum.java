@@ -21,6 +21,22 @@ public enum AvgDataEnum {
         this.minutes = minutes;
     }
 
+    public static AvgDataEnum from(int type) {
+        switch (type) {
+            case 1:
+                return MINUTE;
+            case 2:
+                return HOUR;
+            case 3:
+                return DAY;
+            case 4:
+                return WEEK;
+            case 5:
+                return MONTH;
+        }
+        return MONTH;
+    }
+
     public int getType() {
         return type;
     }

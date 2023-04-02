@@ -1,7 +1,6 @@
 package com.imap.pojo;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.imap.utils.DataReportSource;
 import com.imap.utils.MapperUtil;
 import com.imap.utils.MathUtil;
 import lombok.AllArgsConstructor;
@@ -65,7 +64,7 @@ public class MonitorConfig {
         return monitorConfigs;
     }
 
-    public static MonitorConfig getConfig(ResultSet resultSet) throws SQLException, IOException {
+    public static MonitorConfig fromResultSet(ResultSet resultSet) throws SQLException, IOException {
 //        site_id,timestamp,status,version,interval,monitor_items
         int siteId = resultSet.getInt("site_id");
         long timestamp = resultSet.getTimestamp("timestamp").getTime();
@@ -88,7 +87,7 @@ public class MonitorConfig {
         return monitorConfig;
     }
 
-    public static MonitorConfig getConfig(String json) throws IOException {
+    public static MonitorConfig fromResultSet(String json) throws IOException {
         MonitorConfig config = MapperUtil.jsonToObj(json, MonitorConfig.class);
         return config;
     }
@@ -97,7 +96,7 @@ public class MonitorConfig {
         MonitorConfig defaultConfig = getDefaultConfig(1);
         String str = MapperUtil.obj2Str(defaultConfig);
         System.out.println(str);
-        MonitorConfig configFromJson = getConfig(str);
+        MonitorConfig configFromJson = fromResultSet(str);
         System.out.println(configFromJson);
     }
 }

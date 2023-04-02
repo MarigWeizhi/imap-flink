@@ -4,6 +4,7 @@ import com.imap.flink.demo.DataReportMapper;
 import com.imap.pojo.DataReport;
 import com.imap.pojo.DataReportTableRow;
 import com.imap.utils.DataReportSource;
+import com.imap.utils.MySQLUtil;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
@@ -23,7 +24,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 import static org.apache.flink.table.api.Expressions.$;
 
@@ -48,14 +48,15 @@ public class AvgDataToMySQL {
                         .<DataReport>forBoundedOutOfOrderness(Duration.ofSeconds(5))
                         .withTimestampAssigner((SerializableTimestampAssigner<DataReport>) (dataReport, l) -> dataReport.getTimestamp()));
 
+        JdbcConnectionOptions jdbcConnectionOptions = MySQLUtil.getOptions();
         // 聚合dataReport 并保存至MySQL数据库
-        AggDataReport(tableEnv,AvgDataEnum.MINUTE ,dataReportStream);
+        AggDataReport(tableEnv, jdbcConnectionOptions, AvgDataEnum.MINUTE ,dataReportStream);
 
         dataReportStream.print("input");
         env.execute();
     }
 
-    public static void AggDataReport(StreamTableEnvironment tableEnv, AvgDataEnum minutes, SingleOutputStreamOperator<DataReport> dataReportStream) {
+    public static void AggDataReport(StreamTableEnvironment tableEnv, JdbcConnectionOptions jdbcConnectionOptions, AvgDataEnum minutes, SingleOutputStreamOperator<DataReport> dataReportStream) {
         // 数据格式转换
         SingleOutputStreamOperator<DataReportTableRow> dataReportRowStream = dataReportStream.map(new DataReportMapper())
                 // 重设水位线，不然会无法触发聚合函数，或者将AggDataReport的调用提前到数据源附近
@@ -121,12 +122,7 @@ public class AvgDataToMySQL {
                         .withBatchIntervalMs(5000)
                         .build()
                 ,
-                new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-                        .withUrl("jdbc:mysql://localhost:3306/imap")
-                        .withDriverName("com.mysql.jdbc.Driver")
-                        .withUsername("root")
-                        .withPassword("")
-                        .build()
+                jdbcConnectionOptions
         ));
 
     }
