@@ -1,5 +1,6 @@
 package com.imap.flink;
 
+import com.imap.flink.sink.HdfsSink;
 import com.imap.pojo.AlarmItem;
 import com.imap.pojo.DataReport;
 import com.imap.pojo.MonitorConfig;
@@ -7,10 +8,10 @@ import com.imap.utils.MapperUtil;
 import com.imap.utils.MonitorConfigSource;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
@@ -19,7 +20,6 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
-import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 import org.apache.flink.streaming.connectors.kafka.table.KafkaOptions;
@@ -29,7 +29,6 @@ import org.apache.flink.util.OutputTag;
 
 import java.time.Duration;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: Weizhi
@@ -52,7 +51,8 @@ public class Main {
     public static Properties earliestProp =  new Properties();;
     public static Properties latestProp =  new Properties();;
     public static JdbcConnectionOptions jdbcConnectionOptions;
-    public static  StreamingFileSink hdfsSink;
+    public static  StreamingFileSink streamingFileSink;
+    public static  FileSink hdfsFileSink;
     public static boolean saveHDFS;
 
 /**
@@ -100,16 +100,17 @@ public class Main {
             // 修改用户名，解决权限问题
             System.setProperty("HADOOP_USER_NAME", "root");
             Path outputPath = new Path(LOCAL_HDFS_URL);
-            hdfsSink = StreamingFileSink
-                    .forRowFormat(outputPath, new SimpleStringEncoder<String>("UTF-8"))
-                    .withRollingPolicy(
-                            // 满足以下任意一个条件 触发sink
-                            DefaultRollingPolicy.builder()
-                                    .withRolloverInterval(TimeUnit.MINUTES.toMillis(5)) // 距上次保存超过5分钟
-                                    .withInactivityInterval(TimeUnit.MINUTES.toMillis(1)) // 已有1分钟没有新的数据
-                                    .withMaxPartSize(1024 * 1024) // 未保存数据已经有1MB
-                                    .build())
-                    .build();
+            hdfsFileSink  = HdfsSink.getHdfsSink();
+//            hdfsSink = StreamingFileSink
+//                    .forRowFormat(outputPath, new SimpleStringEncoder<String>("UTF-8"))
+//                    .withRollingPolicy(
+//                            // 满足以下任意一个条件 触发sink
+//                            DefaultRollingPolicy.builder()
+//                                    .withRolloverInterval(TimeUnit.MINUTES.toMillis(5)) // 距上次保存超过5分钟
+//                                    .withInactivityInterval(TimeUnit.MINUTES.toMillis(1)) // 已有1分钟没有新的数据
+//                                    .withMaxPartSize(1024 * 1024) // 未保存数据已经有1MB
+//                                    .build())
+//                    .build();
         }catch (Exception e){
             System.out.println("初始化异常：" + args);
             e.printStackTrace();
@@ -177,7 +178,8 @@ public class Main {
         AvgDataToMySQL.AggDataReport(tableEnv,jdbcConnectionOptions, AvgDataEnum.HOUR, processedStream);
         // 保存到HDFS
         if (saveHDFS){
-            processedStream.addSink(hdfsSink);
+            processedStream.sinkTo(hdfsFileSink);
+//            processedStream.addSink(streamingFileSink);
         }
         processedStream.print("输出");
         System.out.println("主进程就绪");
