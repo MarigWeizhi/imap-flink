@@ -8,12 +8,15 @@ import com.imap.utils.MapperUtil;
 import com.imap.utils.MonitorConfigSource;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -29,6 +32,7 @@ import org.apache.flink.util.OutputTag;
 
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: Weizhi
@@ -38,8 +42,8 @@ import java.util.Properties;
 public class Main {
     public static final String REMOTE_KAFKA_URL = "weizhi:9092";
     public static final String LOCAL_KAFKA_URL = "localhost:9092";
-    public static final String REMOTE_HDFS_URL = "hdfs://weizhi:8020/imap/report";
-    public static final String LOCAL_HDFS_URL = "hdfs://weizhi:8020/imap/report";
+    public static final String CKPT_HDFS_URL = "hdfs://weizhi:8020/imap/checkpoint";
+    public static final String REPORT_HDFS_URL = "hdfs://weizhi:8020/imap/report";
     public static final String REMOTE_MYSQL_URL = "jdbc:mysql://weizhi:3306/imap?serverTimezone=UTC&useSSL=false";
     public static final String LOCAL_MYSQL_URL = "jdbc:mysql://localhost:3306/imap?serverTimezone=UTC&useSSL=false";
     public static final String REPORT_TOPIC = "report";
@@ -55,12 +59,15 @@ public class Main {
     public static  FileSink hdfsFileSink;
     public static boolean saveHDFS;
 
+    private static StreamExecutionEnvironment env;
+    private static StreamTableEnvironment tableEnv;
+
 /**
  *
  /usr/local/flink/bin/flink run -m localhost:8081 -c com.imap.flink.Main ./IMAP-Flink-1.0-SNAPSHOT.jar --mysql local --kafka local --hdfs local
  /usr/local/flink/bin/flink run -m localhost:8081 -c com.imap.flink.Main ./IMAP-Flink-1.0-SNAPSHOT-jar-with-dependencies.jar --mysql local --kafka local --hdfs local
  * */
-    private static void init(String[] args){
+    private static void parseArgs(String[] args){
         try{// 从参数中获取 --mysql local --kafka local --hdfs local
             ParameterTool parameterTool = ParameterTool.fromArgs(args);
             String mysql = parameterTool.get("mysql");
@@ -99,18 +106,8 @@ public class Main {
             // hdfs sink 配置
             // 修改用户名，解决权限问题
             System.setProperty("HADOOP_USER_NAME", "root");
-            Path outputPath = new Path(LOCAL_HDFS_URL);
+            Path outputPath = new Path(REPORT_HDFS_URL);
             hdfsFileSink  = HdfsSink.getHdfsSink();
-//            hdfsSink = StreamingFileSink
-//                    .forRowFormat(outputPath, new SimpleStringEncoder<String>("UTF-8"))
-//                    .withRollingPolicy(
-//                            // 满足以下任意一个条件 触发sink
-//                            DefaultRollingPolicy.builder()
-//                                    .withRolloverInterval(TimeUnit.MINUTES.toMillis(5)) // 距上次保存超过5分钟
-//                                    .withInactivityInterval(TimeUnit.MINUTES.toMillis(1)) // 已有1分钟没有新的数据
-//                                    .withMaxPartSize(1024 * 1024) // 未保存数据已经有1MB
-//                                    .build())
-//                    .build();
         }catch (Exception e){
             System.out.println("初始化异常：" + args);
             e.printStackTrace();
@@ -119,13 +116,11 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        init(args);
-        // 创建Flink执行环境
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
-        // 创建Table执行环境
-        EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
+        // 解析参数
+        parseArgs(args);
+
+        // 初始化环境
+        init();
 
         // 数据源
         SingleOutputStreamOperator<DataReport> dataReportStream =
@@ -184,5 +179,37 @@ public class Main {
         processedStream.print("输出");
         System.out.println("主进程就绪");
         env.execute();
+    }
+
+    private static void init() {
+        // 创建Flink执行环境
+        env = StreamExecutionEnvironment.getExecutionEnvironment();
+        // 并行度
+        env.setParallelism(1);
+
+        if(saveHDFS){
+            //设置Checkpoint的时间间隔为5000ms
+            env.enableCheckpointing(5000,CheckpointingMode.EXACTLY_ONCE);
+            // 设置Checkpoint存储路径
+            env.getCheckpointConfig().setCheckpointStorage(CKPT_HDFS_URL);
+            //设置两个Checkpoint 之间最少等待时间,如设置Checkpoint之间最少是要等 500ms(为了避免每隔5000ms做一次Checkpoint的时候,前一次太慢和后一次重叠到一起去了  --//默认是0
+            env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
+            //设置checkpoint的超时时间,如果 Checkpoint在 10s内尚未完成说明该次Checkpoint失败,则丢弃。
+            env.getCheckpointConfig().setCheckpointTimeout(10000L);
+            //设置同一时间有多少个checkpoint可以同时执行
+            env.getCheckpointConfig().setMaxConcurrentCheckpoints(2);
+            // 设置重启策略
+            // 一个时间段内的最大失败次数
+            env.setRestartStrategy(RestartStrategies.failureRateRestart(3,
+                    // 衡量失败次数的是时间段
+                    Time.of(5, TimeUnit.MINUTES),
+                    // 间隔
+                    Time.of(10, TimeUnit.SECONDS)
+            ));
+        }
+
+        // 创建Table执行环境
+        EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+        tableEnv = StreamTableEnvironment.create(env, settings);
     }
 }
