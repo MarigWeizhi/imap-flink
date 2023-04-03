@@ -44,7 +44,7 @@ public class MySQLUtil {
     public static JdbcConnectionOptions getOptions(String type) {
         if("remote".equals(type)){
             return new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-                .withUrl("jdbc:mysql://47.116.66.37:3306/imap?serverTimezone=UTC&useSSL=false")
+                .withUrl("jdbc:mysql://weizhi:3306/imap?serverTimezone=UTC&useSSL=false")
                 .withDriverName("com.mysql.jdbc.Driver")
                 .withUsername("imap")
                 .withPassword("imap@SSPU")

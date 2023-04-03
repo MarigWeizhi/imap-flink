@@ -16,9 +16,9 @@ import java.net.URISyntaxException;
 public class HDFSTest {
     public static void main(String[] args) throws URISyntaxException, IOException, InterruptedException {
         Configuration configuration=new Configuration();
-//        configuration.set("dfs.client.use.datanode.hostname","true");
+        configuration.set("dfs.client.use.datanode.hostname","true");
         //2.根据configuration获取Filesystem对象
-        FileSystem fs=FileSystem.get(new URI("hdfs://47.116.66.37:8020"),configuration,"root");
+        FileSystem fs=FileSystem.get(new URI("hdfs://weizhi:8020"),configuration,"root");
         fs.copyFromLocalFile(new Path("A:\\local\\BigData\\IMAP-Flink\\src\\main\\resources\\log4j.properties"),new Path("/test.txt"));
         //4.释放FileSystem对象（类似数据库连接）
         fs.close();

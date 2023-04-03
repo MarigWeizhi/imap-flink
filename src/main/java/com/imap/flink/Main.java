@@ -37,11 +37,11 @@ import java.util.concurrent.TimeUnit;
  * @Description:
  */
 public class Main {
-    public static final String REMOTE_KAFKA_URL = "47.116.66.37:9092";
+    public static final String REMOTE_KAFKA_URL = "weizhi:9092";
     public static final String LOCAL_KAFKA_URL = "localhost:9092";
-    public static final String REMOTE_HDFS_URL = "hdfs://47.116.66.37:8020/imap/report";
+    public static final String REMOTE_HDFS_URL = "hdfs://weizhi:8020/imap/report";
     public static final String LOCAL_HDFS_URL = "hdfs://weizhi:8020/imap/report";
-    public static final String REMOTE_MYSQL_URL = "jdbc:mysql://47.116.66.37:3306/imap?serverTimezone=UTC&useSSL=false";
+    public static final String REMOTE_MYSQL_URL = "jdbc:mysql://weizhi:3306/imap?serverTimezone=UTC&useSSL=false";
     public static final String LOCAL_MYSQL_URL = "jdbc:mysql://localhost:3306/imap?serverTimezone=UTC&useSSL=false";
     public static final String REPORT_TOPIC = "report";
     public static final String ALARM_TOPIC = "alarm";
