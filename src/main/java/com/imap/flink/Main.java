@@ -29,6 +29,7 @@ import org.apache.flink.streaming.connectors.kafka.table.KafkaOptions;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.util.OutputTag;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 
 import java.time.Duration;
 import java.util.Properties;
@@ -101,6 +102,7 @@ public class Main {
             earliestProp.setProperty(KafkaOptions.SCAN_STARTUP_MODE.key(), KafkaOptions.SCAN_STARTUP_MODE_VALUE_EARLIEST);
 
             latestProp.setProperty("bootstrap.servers", kafkaUrl);
+            latestProp.setProperty(ConsumerConfig.GROUP_ID_CONFIG,"report-group");
             latestProp.setProperty(KafkaOptions.SCAN_STARTUP_MODE.key(), KafkaOptions.SCAN_STARTUP_MODE_VALUE_LATEST);
 
             // hdfs sink 配置
