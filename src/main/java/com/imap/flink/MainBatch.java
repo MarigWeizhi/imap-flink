@@ -106,7 +106,6 @@ public class MainBatch {
         System.out.println("注册表:" + tableName);
         // 注册表
         tableEnv.createTemporaryView(tableName, avgDataTable);
-
         // 聚合查询
         Table newAvgDataTable = tableEnv
                 .sqlQuery("SELECT " +
@@ -122,7 +121,7 @@ public class MainBatch {
                         "GROUP BY siteId, window_start, window_end ");
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(newAvgDataTable);
-        String sql = "insert into dev_avg_data (site_id, end_time, type, avg_tmp, avg_hmt, avg_lx) values (?, ?, ?, ?, ?, ?)";
+        String sql = "insert into dev_avg_data (site_id, end_time, type, avg_tmp, avg_hmt, avg_lx) values (?, ?, ?, ?, ?, ?) on duplicate key update avg_tmp = values(avg_tmp), avg_hmt = values(avg_hmt), avg_lx = values(avg_lx)";
 
         rowDataStream.print("aggStream");
         rowDataStream.addSink(JdbcSink.sink(

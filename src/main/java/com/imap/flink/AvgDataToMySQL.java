@@ -97,7 +97,7 @@ public class AvgDataToMySQL {
                         "GROUP BY siteId, window_start, window_end ");
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(avgDataTable);
-        String sql = "insert into dev_avg_data (site_id, end_time, type, avg_tmp, avg_hmt, avg_lx) values (?, ?, ?, ?, ?, ?)";
+        String sql = "insert into dev_avg_data (site_id, end_time, type, avg_tmp, avg_hmt, avg_lx) values (?, ?, ?, ?, ?, ?) on duplicate key update avg_tmp = values(avg_tmp), avg_hmt = values(avg_hmt), avg_lx = values(avg_lx)";
 
         rowDataStream.print("rowDataStream");
         rowDataStream.addSink(JdbcSink.sink(

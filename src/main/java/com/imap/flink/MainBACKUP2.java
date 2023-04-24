@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  * @Date: create in 2023/2/17 21:02
  * @Description:
  */
-public class Main {
+public class MainBACKUP2 {
     public static final String REMOTE_KAFKA_URL = "weizhi:9092";
     public static final String LOCAL_KAFKA_URL = "localhost:9092";
     public static final String CKPT_HDFS_URL = "hdfs://weizhi:8020/imap/checkpoint";
@@ -126,22 +126,30 @@ public class Main {
                         new SimpleStringSchema(),
                                 latestProp))
                     .map(json -> MapperUtil.jsonToObj(json, DataReport.class))
-                    // 过滤无法解析的数据
-                    .filter(item -> item!=null)
                     // 设置水位线
                     .assignTimestampsAndWatermarks(WatermarkStrategy
                     .<DataReport>forBoundedOutOfOrderness(Duration.ZERO)
                     .withTimestampAssigner((SerializableTimestampAssigner<DataReport>) (data, l) -> data.getTimestamp()));
+        // 测试流
+        // DataStreamSource<MonitorConfig> configDataStreamSource = env.fromCollection(MonitorConfig.getDefaultConfigList());
+
         // 监控配置 从数据库轮询获取
-        DataStreamSource<MonitorConfig> configDataStreamSource = env.addSource(
-                new MonitorConfigSource(jdbcConnectionOptions,5000));
+        DataStreamSource<MonitorConfig> configDataStreamSource = env.addSource(new MonitorConfigSource(jdbcConnectionOptions,5000));
+        // 监控配置 从kafka获取
+//        SingleOutputStreamOperator<MonitorConfig> configDataStreamSource =
+//                env.addSource(new FlinkKafkaConsumer<String>("config",
+//                                new SimpleStringSchema(),
+//                                earliestProp))
+//                .map(json -> MapperUtil.jsonToObj(json, MonitorConfig.class));
+
         // 监控广播流 <siteId,monitorConfig>
         BroadcastStream<MonitorConfig> configBroadcastStream = configDataStreamSource
                 .broadcast(new MapStateDescriptor<Integer, MonitorConfig>(
                         "matcher",
                         Integer.class,
                         MonitorConfig.class));
-        //  异常数据分流标签，最右边的大括号不能少，不然会有泛型擦除的问题
+        // 异常数据分流标签
+        // 最右边的大括号不能少，不然会有泛型擦除的问题
         OutputTag<AlarmItem> abnormalDataTag = new OutputTag<AlarmItem>("abnormalData") {};
         // 数据异常匹配
         SingleOutputStreamOperator<DataReport> processedStream = dataReportStream.keyBy(data -> data.getSiteId())
@@ -160,12 +168,12 @@ public class Main {
         // 保存到HDFS
         if (saveHDFS){
             processedStream.sinkTo(hdfsFileSink);
+//            processedStream.addSink(streamingFileSink);
         }
         processedStream.print("输出");
         System.out.println("主进程就绪");
         env.execute();
     }
-
 
     private static void init() {
         // 创建Flink执行环境
