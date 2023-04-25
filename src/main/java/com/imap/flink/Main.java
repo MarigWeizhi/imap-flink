@@ -41,7 +41,8 @@ import java.util.concurrent.TimeUnit;
  * @Description:
  */
 public class Main {
-    public static final String REMOTE_KAFKA_URL = "weizhi:9092";
+//    public static final String REMOTE_KAFKA_URL = "weizhi:9092";
+    public static final String REMOTE_KAFKA_URL = "47.113.150.217:9092";
     public static final String LOCAL_KAFKA_URL = "localhost:9092";
     public static final String CKPT_HDFS_URL = "hdfs://weizhi:8020/imap/checkpoint";
     public static final String REPORT_HDFS_URL = "hdfs://weizhi:8020/imap/report";
