@@ -21,7 +21,8 @@ public class SinkToKafka {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         Properties prop = new Properties();
-        prop.setProperty("bootstrap.servers","47.116.66.37:9092");
+//        prop.setProperty("bootstrap.servers","47.116.66.37:9092");
+        prop.setProperty("bootstrap.servers","47.113.150.217:9092");
         DataStreamSource<String> source = env.addSource(new FlinkKafkaConsumer<String>("test", new SimpleStringSchema(), prop));
         SingleOutputStreamOperator<String> mapResult = source.map(line -> {
             List<String> stringList = Arrays.stream(line.split(",")).map(item -> item.trim()).collect(Collectors.toList());

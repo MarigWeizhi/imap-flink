@@ -159,7 +159,7 @@ public class Main {
                 .addSink(new FlinkKafkaProducer<String>(ALARM_TOPIC,new SimpleStringSchema(),earliestProp));
         // 默认聚合分钟和小时粒度的数据
         AvgDataToMySQL.AggDataReport(tableEnv,jdbcConnectionOptions, AvgDataEnum.MINUTE, processedStream);
-        AvgDataToMySQL.AggDataReport(tableEnv,jdbcConnectionOptions, AvgDataEnum.HOUR, processedStream);
+//        AvgDataToMySQL.AggDataReport(tableEnv,jdbcConnectionOptions, AvgDataEnum.HOUR, processedStream);
         // 保存到HDFS
         if (saveHDFS){
             processedStream.sinkTo(hdfsFileSink);
