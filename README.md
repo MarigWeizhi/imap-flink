@@ -65,7 +65,7 @@
 以下为系统的整体数据流架构图，展示了从数据采集到展示的完整流程：
 
 <div align="center">
-  <img src="./README/framwork.png" alt="系统数据流图" width="800"/>
+  <img src="./README/data-flow.png" alt="系统数据流图" width="800"/>
 </div>
 
 
